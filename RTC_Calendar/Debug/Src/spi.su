@@ -1,6 +1,0 @@
-../Src/spi.c:8:6:spi_gpio_init	4	static
-../Src/spi.c:43:6:spi1_config	4	static
-../Src/spi.c:77:6:spi1_trasmit	24	static
-../Src/spi.c:101:6:spi1_receive	16	static
-../Src/spi.c:115:6:cs_enable	4	static
-../Src/spi.c:120:6:cs_disable	4	static
