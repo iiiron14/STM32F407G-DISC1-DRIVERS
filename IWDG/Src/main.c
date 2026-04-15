@@ -1,66 +1,7 @@
-#include "rtc.h"
-#include "uart.h"
+#include "iwdg.h"
 #include <stdio.h>
-
-#define BUFF_LEN	20
-
-uint8_t time_buff[BUFF_LEN] = {0};
-uint8_t date_buff[BUFF_LEN] = {0};
-
-static void display_rtc_calendar(void);
 
 int main(void)
 {
-	uart_init();
 
-	rtc_init();
-
-	while(1)
-	{
-		display_rtc_calendar();
-
-		for(volatile int i=0; i<3000000; i++) ;
-	}
 }
-
-void display_rtc_calendar(void)
-{
-	// display format: hh : mm : ss and dd : mm : yy
-	uint8_t year, month, day, hour, minute, second;
-	year = rtc_convert_bcd2dec(rtc_date_get_year());
-	month = rtc_convert_bcd2dec(rtc_date_get_month());
-	day = rtc_convert_bcd2dec(rtc_date_get_day());
-	hour = rtc_convert_bcd2dec(rtc_time_get_hour());
-	minute = rtc_convert_bcd2dec(rtc_time_get_minute());
-	second = rtc_convert_bcd2dec(rtc_time_get_second());
-
-	sprintf((char *)time_buff, "%.2d : %.2d : %.2d", hour, minute, second);
-	printf("%.2d : %.2d : %.2d\n\r", hour, minute, second);
-
-	sprintf((char *)date_buff,  "%.2d: %.2d: %.2d", day, month, year);
-	printf("%.2d : %.2d : %.2d\n\r", day, month, year);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
