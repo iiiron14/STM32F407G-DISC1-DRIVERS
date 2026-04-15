@@ -1,0 +1,20 @@
+# cartelle generate in modo automatico
+Debug/
+Release/
+bin/
+obj/
+
+# file e cartelle dell'IDE
+.settings/
+.metadata/
+
+
+# file di configurazione del debug
+*.launch
+
+# File temporanei
+*.bak
+*.log
+
+# File temporanei config cloud
+.tmp.driveupload/
