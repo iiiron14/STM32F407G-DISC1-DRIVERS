@@ -1,0 +1,42 @@
+#include "i2c.h"
+
+#define GPIOBEN		(1U<<1)		// PB8 SCL, PB9 SDA
+#define I2C1EN		(1U<<21)	// APB1
+
+void i2c1_init(void)
+{
+	// enable clock access to GPIOB
+	RCC->AHB1ENR |= GPIOBEN;
+	// enable clock access to I2C1
+	RCC->APB1ENR |= I2C1EN;
+
+	// set PB8 and PB9 to alternate function
+	GPIOB->MODER &=	~(1U<<16);
+	GPIOB->MODER |=	(1U<<17);
+	GPIOB->MODER &=	~(1U<<18);
+	GPIOB->MODER |= (1U<<19);
+
+	// set output type of PB8 and PB9 to open drain
+	GPIOB->OTYPER |= (1U<<8);
+	GPIOB->OTYPER |= (1U<<9);
+
+	// enable pull-up for PB8 and PB9
+	GPIOB->PUPDR |= (1U<<16);
+	GPIOB->PUPDR &= ~(1U<<17);
+
+	GPIOB->PUPDR |= (1U<<18);
+	GPIOB->PUPDR &= ~(1U<<19);
+
+	// set AF4 to PB8 and PB9
+	GPIOB->AFR[1] &= ~(1U<<0);
+	GPIOB->AFR[1] &= ~(1U<<1);
+	GPIOB->AFR[1] |= (1U<<2);
+	GPIOB->AFR[1] &= ~(1U<<3);
+
+	GPIOB->AFR[1] &= ~(1U<<4);
+	GPIOB->AFR[1] &= ~(1U<<5);
+	GPIOB->AFR[1] |= (1U<<6);
+	GPIOB->AFR[1] &= ~(1U<<7);
+
+
+}

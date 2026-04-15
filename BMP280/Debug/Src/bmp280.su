@@ -1,0 +1,9 @@
+../Src/bmp280.c:47:6:bmp280_init	16	static
+../Src/bmp280.c:70:6:bmp280_write	24	static
+../Src/bmp280.c:84:6:bmp280_read	24	static
+../Src/bmp280.c:96:6:bmp280_read_calibration	40	static
+../Src/bmp280.c:119:9:compensate_T_int32	32	static
+../Src/bmp280.c:131:10:compensate_P_int64	328	static
+../Src/bmp280.c:150:9:read_temp_raw	16	static
+../Src/bmp280.c:161:10:read_press_raw	16	static
+../Src/bmp280.c:172:6:normal_mode_en	16	static

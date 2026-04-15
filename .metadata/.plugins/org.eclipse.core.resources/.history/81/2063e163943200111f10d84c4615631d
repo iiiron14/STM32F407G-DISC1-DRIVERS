@@ -1,0 +1,177 @@
+#include "bmp280.h"
+
+#define BMP280_REG_ID			0xD0
+#define BMP280_REG_RES			0xE0
+#define BMP280_REG_STATUS		0xF3
+#define BMP280_REG_CTRL_MEAS	0xF4
+#define BMP280_REG_CONFIG		0xF5
+#define BMP280_REG_PRESS_MSB	0xF7
+#define BMP280_REG_PRESS_LSB	0xF8
+#define BMP280_REG_PRESS_XLSB	0xF9
+#define BMP280_REG_TEMP_MSB		0xFA
+#define BMP280_REG_TEMP_LSB		0xFB
+#define BMP280_REG_TEMP_XLSB	0xFC
+
+// compensation
+#define DIG_T1_REG_LSB	0x88
+#define DIG_T1_REG_MSB	0x89
+#define DIG_T2_REG_LSB	0x8A
+#define DIG_T2_REG_MSB	0x8B
+#define DIG_T3_REG_LSB	0x8C
+#define DIG_T3_REG_MSB	0x8D
+#define DIG_P1_REG_LSB	0x8E
+#define DIG_P1_REG_MSB	0x8F
+#define DIG_P2_REG_LSB	0x90
+#define DIG_P2_REG_MSB	0x91
+#define DIG_P3_REG_LSB	0x92
+#define DIG_P3_REG_MSB	0x93
+#define DIG_P4_REG_LSB	0x94
+#define DIG_P4_REG_MSB	0x95
+#define DIG_P5_REG_LSB	0x96
+#define DIG_P5_REG_MSB	0x97
+#define DIG_P6_REG_LSB	0x98
+#define DIG_P6_REG_MSB	0x99
+#define DIG_P7_REG_LSB	0x9A
+#define DIG_P7_REG_MSB	0x9B
+#define DIG_P8_REG_LSB	0x9C
+#define DIG_P8_REG_MSB	0x9D
+#define DIG_P9_REG_LSB	0x9E
+#define DIG_P9_REG_MSB	0x9F
+
+#define MEASURING		(1U<<3)
+#define UPDATING		(1U<<0)
+
+#define READ_MASK		(0x80U)
+#define WRITE_MASK		(0x7FU)
+
+#define BMP280_DEVICE_ADDR	(0x76U)
+
+char data;
+
+void bmp280_init(void)
+{
+	uint8_t ctrl_meas = 0;
+	uint8_t config = 0;
+
+	ctrl_meas |= (1U<<2);		// pressure oversampling x1
+	ctrl_meas |= (1U<<5);		// temperature oversampling x1
+	// controls for the power mode are default to sleep (00). change it to 11 for normal mode after init
+
+	config |= (1U<<5);			// sets 62.5 ms t_sb (standby)
+	// zero filter coefficients, no 3-wire SPI
+}
+
+void bmp280_read_address(uint8_t reg)
+{
+	i2c1_byte_read(BMP280_DEVICE_ADDR, reg, &data);
+}
+
+void bmp280_write(uint8_t reg, uint8_t value)
+{
+	uint8_t data[1];
+	data[0] = value;
+	i2c1_burst_write(BMP280_DEVICE_ADDR, reg, 1, data);
+}
+
+void bmp280_read(uint8_t reg, uint8_t *data, uint32_t nbytes)
+{
+	i2c1_burst_read(BMP280_DEVICE_ADDR, reg, nbytes, (char *) data);
+}
+
+void bmp280_read_calibration(BMP280_CALIB_COEFF_TypeDef *coeff)
+{
+	uint8_t data[24];
+
+	bmp280_read(DIG_T1_REG_LSB, data, 24);		// lettura contigua di tutti i registri di calibrazione (speriamo funzioni)
+
+	coeff->dig_T1 = (uint16_t) ( (data[1]<<8) | (data[0]) );
+	coeff->dig_T2 = (int16_t) ( (data[3]<<8) | (data[2]) );
+	coeff->dig_T3 = (int16_t) ( (data[5]<<8) | (data[4]) );
+	coeff->dig_P1 = (uint16_t) ( (data[7]<<8) | (data[6]) );
+	coeff->dig_P2 = (int16_t) ( (data[9]<<8) | (data[8]) );
+	coeff->dig_P3 = (int16_t) ( (data[11]<<8) | (data[10]) );
+	coeff->dig_P4 = (int16_t) ( (data[13]<<8) | (data[12]) );
+	coeff->dig_P5 = (int16_t) ( (data[15]<<8) | (data[14]) );
+	coeff->dig_P6 = (int16_t) ( (data[17]<<8) | (data[16]) );
+	coeff->dig_P7 = (int16_t) ( (data[19]<<8) | (data[18]) );
+	coeff->dig_P8 = (int16_t) ( (data[21]<<8) | (data[20]) );
+	coeff->dig_P9 = (int16_t) ( (data[23]<<8) | (data[22]) );
+}
+
+
+int32_t t_fine;
+/*Returns temperature in °C, resolution 0.01, output 5123 equals 51.23 °C*/
+int32_t compensate_T_int32(int32_t adc_T, BMP280_CALIB_COEFF_TypeDef *coeff)
+{
+	int32_t var1, var2, T;
+	var1 = ((((adc_T>>3) - ((int32_t)coeff->dig_T1<<1))) * ((int32_t)coeff->dig_T2)) >> 11;
+	var2 = (((((adc_T>>4) - ((int32_t)coeff->dig_T1)) * ((adc_T>>4) - ((int32_t)coeff->dig_T1)))>>12) * ((int32_t)coeff->dig_T3)) >> 14;
+	t_fine = var1 + var2;
+	T = (t_fine*5 +128) >> 8;
+	return T;
+}
+
+/*Returns pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fractional bits)
+ * Output value of 24674867 represents 24674867/256 = 96386.2 Pa = 963.862 hPa*/
+uint32_t compensate_P_int64(int32_t adc_P, BMP280_CALIB_COEFF_TypeDef *coeff)
+{
+	int64_t var1, var2, p;
+	var1 = ((int64_t)t_fine) -128000;
+	var2 = var1*var1*(int64_t)coeff->dig_P6;
+	var2 = var2 + ((var1*(int64_t)coeff->dig_P5)<<17);
+	var2 = var2 + (((int64_t)coeff->dig_P4)<<35);
+	var1 = ((var1*var1*(int64_t)coeff->dig_P3)>>8) + ((var1*(int64_t)coeff->dig_P2)<<12);
+	var1 = (((((int64_t)1)<<47)+var1))*((int64_t)coeff->dig_P1)>>33;
+	if (var1==0)
+		return 0;
+	p = 1048576-adc_P;
+	p=(((p<<31)-var2)*3125)/var1;
+	var1 = (((int64_t)coeff->dig_P9)*(p>>13)*(p>>13)) >> 25;
+	var2 = (((int64_t)coeff->dig_P8) * p) >> 19;
+	p = ((p + var1 + var2) >> 8) + (((int64_t)coeff->dig_P7)<<4);
+	return (uint32_t)p;
+}
+
+int32_t read_temp_raw(void)
+{
+	uint8_t data[2];
+	int32_t T;
+
+	bmp280_read(BMP280_REG_TEMP_MSB, data, 2);
+	T = (int32_t) (((uint32_t)data[0]<<12) | ((uint32_t)data[1]<<4));	// deve essere allineata a sx su 20 bit
+
+	return T;
+}
+
+uint32_t read_press_raw(void)
+{
+	uint8_t data[3];
+	uint32_t P;
+
+	bmp280_read(BMP280_REG_PRESS_MSB, data, 3);
+	P = (uint32_t) (((uint32_t)data[0]<<12) | ((uint32_t)data[1]<<4) | ((uint32_t)data[2]>>4));
+
+	return P;
+}
+
+void normal_mode_en(void)
+{
+	uint8_t ctrl_meas;
+
+	bmp280_read(BMP280_REG_CTRL_MEAS, &ctrl_meas, 1);
+
+	ctrl_meas |= (1U<<0);
+	ctrl_meas |= (1U<<1);
+
+	bmp280_write(BMP280_REG_CTRL_MEAS, ctrl_meas);
+}
+
+
+
+
+
+
+
+
+
+

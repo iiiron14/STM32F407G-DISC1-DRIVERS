@@ -1,0 +1,32 @@
+#ifndef BMP280_H__
+#define BMP280_H__
+
+#include "spi.h"
+
+typedef struct
+{
+	uint16_t dig_T1;
+	int16_t dig_T2;
+	int16_t dig_T3;
+	uint16_t dig_P1;
+	int16_t dig_P2;
+	int16_t dig_P3;
+	int16_t dig_P4;
+	int16_t dig_P5;
+	int16_t dig_P6;
+	int16_t dig_P7;
+	int16_t dig_P8;
+	int16_t dig_P9;
+} BMP280_CALIB_COEFF_TypeDef;
+
+void bmp280_init(void);
+void bmp280_write(uint8_t , uint8_t);
+void bmp280_read(uint8_t, uint8_t *, uint8_t);
+void bmp280_read_calibration(BMP280_CALIB_COEFF_TypeDef *);
+uint32_t compensate_P_int64(int32_t, BMP280_CALIB_COEFF_TypeDef *);
+
+int32_t read_temp_raw(void);
+int32_t read_press_raw(void);
+void normal_mode_en(void);
+
+#endif

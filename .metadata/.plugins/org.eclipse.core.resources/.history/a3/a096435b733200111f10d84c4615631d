@@ -1,0 +1,127 @@
+#include "i2c.h"
+
+#define GPIOBEN		(1U<<1)		// PB8 SCL, PB9 SDA
+#define I2C1EN		(1U<<21)	// APB1
+
+#define I2C1_100KHZ		80;
+#define STDMODE_MAX_RISE_TIME 	17;
+
+#define SR_BUSY		(1U<<1)
+#define SR_SB		(1U<<0)
+#define SR1_ADDR	(1U<<1)
+#define SR1_TXE		(1U<<7)
+#define SR1_NXE		(1U<<6)
+#define CR1_START	(1U<<8)
+#define CR1_STOP	(1U<<9)
+#define CR1_ACK		(1U<<10)
+
+
+void i2c1_init(void)
+{
+	// enable clock access to GPIOB
+	RCC->AHB1ENR |= GPIOBEN;
+	// enable clock access to I2C1
+	RCC->APB1ENR |= I2C1EN;
+
+	// set PB8 and PB9 to alternate function
+	GPIOB->MODER &=	~(1U<<16);
+	GPIOB->MODER |=	(1U<<17);
+	GPIOB->MODER &=	~(1U<<18);
+	GPIOB->MODER |= (1U<<19);
+
+	// set output type of PB8 and PB9 to open drain
+	GPIOB->OTYPER |= (1U<<8);
+	GPIOB->OTYPER |= (1U<<9);
+
+	// enable pull-up for PB8 and PB9
+	GPIOB->PUPDR |= (1U<<16);
+	GPIOB->PUPDR &= ~(1U<<17);
+
+	GPIOB->PUPDR |= (1U<<18);
+	GPIOB->PUPDR &= ~(1U<<19);
+
+	// set AF4 to PB8 and PB9
+	GPIOB->AFR[1] &= ~(1U<<0);
+	GPIOB->AFR[1] &= ~(1U<<1);
+	GPIOB->AFR[1] |= (1U<<2);
+	GPIOB->AFR[1] &= ~(1U<<3);
+
+	GPIOB->AFR[1] &= ~(1U<<4);
+	GPIOB->AFR[1] &= ~(1U<<5);
+	GPIOB->AFR[1] |= (1U<<6);
+	GPIOB->AFR[1] &= ~(1U<<7);
+
+	// enter reset mode (SWRST)
+	I2C1->CR1 |= (1U<<15);
+
+	// exit reset mode
+	I2C1->CR1 &= ~(1U<<15);
+
+	// set peripheral clock frequency
+	I2C1->CR2 = (1U<<4); // 16 MHz
+
+	// set I2C to standard mode, 100kHz clock
+	I2C1->CCR = 80;
+
+	// set rise time
+	I2C1->TRISE = STDMODE_MAX_RISE_TIME;
+
+	// enable I2C1 module
+	I2C1->CR1 |= (1U<<0);
+}
+
+void i2c1_byte_read(char saddr, char maddr, char *data)
+{
+	volatile int temp;
+
+	/* wait until bus is not busy */
+	while(I2C1->SR2 & SR_BUSY) ;
+
+	// generate start
+	I2C1->CR1 |= CR1_START;
+
+	// wait until start flag is set
+	while(!(I2C1->SR1 & SR_SB)) ;
+
+	// trasmit slave address + write
+	I2C1->DR = saddr << 1;
+	// wait until addr flag is set
+	while(!(I2C1->SR1 & SR1_ADDR)) ;
+	// clear addr flag
+	temp = I2C1->SR2;
+	// send memory address
+	I2C1->DR = maddr;
+	// wait until trasmitter empty
+	while(!(I2C1->SR1 & SR1_TXE)) ;
+	// generate restart
+	I2C1->CR1 |= CR1_START;
+	while(!(I2C1->SR1 & SR_SB)) ;
+	// trasmit slave address + read
+	I2C1->DR = saddr<<1 | 1;
+	while(!(I2C1->SR1 & SR1_ADDR)) ;
+	// disable ack
+	I2C1->CR1 &= ~(CR1_ACK);
+	temp = I2C1->SR2;
+	// generate stop after data received
+	I2C1->CR1 |= CR1_STOP;
+	// wait until RXNE flag is set
+	while(!(I2C1->SR1 & SR1_NXE)) ;
+	// read data fro DR
+	*data++ = I2C1->DR;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

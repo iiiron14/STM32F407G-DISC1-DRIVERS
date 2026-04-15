@@ -1,0 +1,45 @@
+#include <stdio.h>
+#include "uart.h"
+#include "gpio.h"
+#include "gpio_exti.h"
+
+static void exti_callback(void);
+
+volatile uint8_t btn_pressed;
+
+int main(void)
+{
+	uart_init();
+	led_init();
+	pc13_exti_init();
+
+	while(1)
+	{
+		if(btn_pressed == 1)
+		{
+			exti_callback();
+			for(volatile int i=0; i<100000; i++) ;
+			btn_pressed = 0;
+		}
+	}
+}
+
+static void exti_callback(void)
+{
+	printf("BTN pressed...\r\n");
+	led_toggle();
+}
+
+// Il nome della funzione deve essere esattamente questo per il vettore degli interrupt
+void EXTI0_IRQHandler(void)
+{
+    // Controlla se l'interrupt proviene dalla linea 0
+    if((EXTI->PR & (1U << 0)) != 0)
+    {
+        // Pulisci il flag PR scrivendoci 1
+        EXTI->PR |= (1U << 0);
+
+        // Segnala la pressione al main
+        btn_pressed = 1;
+    }
+}

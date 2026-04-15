@@ -1,0 +1,6 @@
+#include "rtc.h"
+
+int main(void)
+{
+
+}
