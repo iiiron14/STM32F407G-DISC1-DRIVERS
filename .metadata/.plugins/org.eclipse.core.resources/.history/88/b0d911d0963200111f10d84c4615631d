@@ -1,8 +1,0 @@
-#include "i2c.h"
-#include "bmp280.h"
-#include "uart.h"
-
-int main(void)
-{
-
-}

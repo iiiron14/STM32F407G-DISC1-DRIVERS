@@ -1,9 +1,0 @@
-#ifndef I2C_H__
-#define I2C_H__
-
-void i2c1_init(void);
-void i2c1_byte_read(char, char, char*);
-void i2c1_burst_read(char, char, int, char*);
-void i2c1_burst_write(char, char, int, char*);
-
-#endif /*I2C_H__*/
