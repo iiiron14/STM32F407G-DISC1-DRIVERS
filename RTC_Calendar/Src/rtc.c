@@ -60,7 +60,7 @@ static uint8_t rtc_init_seq(void)
 	_rtc_enable_init_mode();
 
 	// wait until init mode is entered
-	while(!(_rtc_isActiveflag_init)) ;
+	while(!_rtc_isActiveflag_init()) ;
 
 	return 1;
 }
@@ -71,7 +71,7 @@ static uint8_t wait_for_synchro(void)
 	RTC->ISR &= ~ISR_RSF;
 
 	// wait for registers to synchronize
-	while(!(_rtc_isActiveflag_rs)) ;
+	while(!_rtc_isActiveflag_rs()) ;
 
 	return 1;
 }
@@ -152,10 +152,10 @@ void rtc_init(void)
 	}
 
 	// set date
-	rtc_date_config(WEEKDAY_SUNDAY, 12, MONTH_APRIL, 2026);
+	rtc_date_config(WEEKDAY_SUNDAY, 0x15, MONTH_APRIL, 0x26);
 
 	//set time
-	rtc_time_config(TIME_FORMAT_AM, 13, 29, 0);
+	rtc_time_config(TIME_FORMAT_AM, 0x13, 0x29, 0x00);
 
 	// set hour format
 	RTC->CR &= ~CR_FMT;
