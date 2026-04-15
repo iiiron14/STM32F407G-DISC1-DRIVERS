@@ -3,7 +3,7 @@
 #define IWDG_START			0xCCCCU
 #define IWDG_RELOAD			0xAAAAU
 #define IWDG_LOAD_EN		0x5555U
-#define IWDG_RELOAD_VAL		1000
+#define IWDG_RELOAD_VAL		0xFFFU
 
 #define RVU_FLAG			(1U<<1)
 #define PVU_FLAG			(1U<<0)

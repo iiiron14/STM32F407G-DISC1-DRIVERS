@@ -4,8 +4,15 @@
 #include "gpio_exti.h"
 #include <stdio.h>
 
+#define LINE0					(1U<<0)
+
+
 static void check_reset_source(void);
+static void exti_callback(void);
+
 uint8_t g_btn_press;
+
+
 int main(void)
 {
 	uart_init();
@@ -27,9 +34,34 @@ int main(void)
 
 static void check_reset_source(void)
 {
+	if((RCC->CSR & RCC_CSR_IWDGRSTF) == RCC_CSR_IWDGRSTF)
+	{
+		// clear IWDG reset flag
+		RCC->CSR = RCC_CSR_RMVF;
+
+		led_on();
+		printf("Reset was caused by IWDG \r\n");
+
+		while(g_btn_press != 1) ;
+
+		g_btn_press = 0;
+	}
 }
 
+static void exti_callback(void)
+{
+	g_btn_press = 1;
+}
 
+void EXTI0_IRQHandler(void)
+{
+	if((EXTI->PR & LINE0) != 0)
+	{
+		// clear flag
+		EXTI->PR |= LINE0;
+		exti_callback();
+	}
+}
 
 
 
