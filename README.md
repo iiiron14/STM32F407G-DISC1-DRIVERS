@@ -30,6 +30,5 @@ I driver includono il supporto completo per le seguenti periferiche:
 ├── drivers/
 │   ├── Inc/           # File header (.h) con definizioni dei registri e API
 │   └── Src/           # Implementazione delle funzioni driver (.c)
-├── examples/          # Esempi pratici di utilizzo per ogni driver
 ├── Startup/           # Startup code e Linker Script
 └── README.md
